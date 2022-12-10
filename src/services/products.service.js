@@ -1,7 +1,7 @@
 import {specificationService} from "./specification.serviece.js";
 import Product from "../model/Product.js";
 
-export const productService = {
+export const productsService = {
   async createNewProduct(category, label, model, price, rate, spec) {
     try {
       const newProduct = new Product({
