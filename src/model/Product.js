@@ -5,7 +5,7 @@ const productSchema = new Schema({
     type: String,
     required: true
   },
-  label: {
+  manufacturer: {
     type: String,
     required: true
   },

@@ -2,11 +2,11 @@ import {specificationService} from "./specification.serviece.js";
 import Product from "../model/Product.js";
 
 export const productsService = {
-  async createNewProduct(category, label, model, price, rate, spec) {
+  async createNewProduct(category, manufacturer, model, price, rate, spec) {
     try {
       const newProduct = new Product({
         category,
-        label,
+        manufacturer,
         model,
         price,
         rate
@@ -31,7 +31,7 @@ export const productsService = {
       const products = await Product.find({
         ...categoryF,
         $or: [
-          {label: {$regex: filter.title ?? '', $options: 'i'}},
+          {manufacturer: {$regex: filter.title ?? '', $options: 'i'}},
           {model: {$regex: filter.title ?? '', $options: 'i'}}
         ]
       })

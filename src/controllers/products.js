@@ -20,8 +20,8 @@ export const addProduct = async (req, res) => {
   //   res.status(400).json({error: 'error'})
   //   return
   // }
-  const {category, label, model, price, rate, specification} = req.body
-  const isProductCreated = await productsService.createNewProduct(category, label, model, price, rate, specification)
+  const {category, manufacturer, model, price, rate, specification} = req.body
+  const isProductCreated = await productsService.createNewProduct(category, manufacturer, model, price, rate, specification)
   if (!isProductCreated) return res.status(500).send({error: "Error, product not added. Contact support or try again later"})
   return res.status(200).send({message: 'Product added'})
 }
