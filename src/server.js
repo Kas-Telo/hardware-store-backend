@@ -4,6 +4,8 @@ import keys from './config/keys.js'
 import mongoose from 'mongoose'
 import cors from 'cors'
 import morgan from 'morgan'
+import {categoryRouter} from "./routes/category.js";
+import {searchParamsRouter} from "./routes/search-params-by-category.js";
 
 mongoose.set('strictQuery', true)
 
@@ -21,7 +23,9 @@ app.use(json)
 app.use(cors({}))
 app.use(morgan('dev'))
 
-app.use('/', productsRouter)
+app.use('/product', productsRouter)
+app.use('/category', categoryRouter)
+app.use('/params', searchParamsRouter)
 
 app.listen(port, (err) => {
   if (err) {

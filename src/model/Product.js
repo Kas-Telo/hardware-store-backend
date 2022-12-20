@@ -1,8 +1,8 @@
 import {Schema, model} from "mongoose";
 
 const productSchema = new Schema({
-  category: {
-    type: String,
+  categoryId: {
+    type: Schema.Types.ObjectId,
     required: true
   },
   manufacturer: {
@@ -20,7 +20,7 @@ const productSchema = new Schema({
   rate: {
     type: Number,
     required: true
-  }
+  },
 })
 
 export default model('product', productSchema)

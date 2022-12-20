@@ -1,11 +1,15 @@
-import {specificationService} from "./specification.serviece.js";
+import {infoService} from "./info.serviece.js";
 import Product from "../model/Product.js";
+import {categoryService} from "./category.service.js";
 
 export const productsService = {
-  async createNewProduct(category, manufacturer, model, price, rate, spec) {
+  async createNewProduct(category, manufacturer, model, price, rate, info) {
     try {
+      const categoryObj = await categoryService.findAllCategories(category)
+      console.log(categoryObj)
+
       const newProduct = new Product({
-        category,
+        categoryId: categoryObj._id,
         manufacturer,
         model,
         price,
@@ -13,8 +17,8 @@ export const productsService = {
       })
       const resp = await newProduct.save()
       const productId = resp._id
-      const isSpecCreate = await specificationService.createSpecForProduct(productId, spec)
-      if (!isSpecCreate) {
+      const isInfoCreate = await infoService.createInfoForProduct(productId, info)
+      if (!isInfoCreate) {
         await Product.deleteOne({_id: productId})
         return false
       }
@@ -27,7 +31,8 @@ export const productsService = {
   async findAllProducts(filter) {
     console.log(filter)
     try {
-      const categoryF = filter.category ? {category: filter.category} : {}
+      const category = await categoryService.findAllCategories(filter.category)
+      const categoryF = filter.category ? {category: category._doc._id} : {}
       const products = await Product.find({
         ...categoryF,
         $or: [
@@ -46,15 +51,13 @@ export const productsService = {
   },
   async findProductById(productId) {
     try {
-      const spec = await specificationService.findSpecByProductId(productId)
-      if (!spec) return null
+      const info = await infoService.findInfoByProductId(productId)
+      if (!info) return null
       const product = await Product.findById(productId, {__v: 0})
       if (product === {}) return null
       return {
         ...product._doc,
-        specification: {
-          ...spec._doc
-        }
+        ...info._doc
       }
     } catch (e) {
       return null
@@ -63,11 +66,10 @@ export const productsService = {
   async deleteProductById(productId) {
     try {
       await Product.deleteOne({_id: productId})
-      return await specificationService.deleteSpecByProductId(productId);
+      return await infoService.deleteInfoByProductId(productId);
     } catch (e) {
       console.log(e)
       return false
     }
   }
-
 }
