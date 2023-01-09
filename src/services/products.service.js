@@ -1,40 +1,63 @@
 import {infoService} from "./info.serviece.js";
 import Product from "../model/Product.js";
 import {categoryService} from "./category.service.js";
+import {searchParamsService} from "./search-params-by-category.service.js";
+import {Info} from "../model/Info.js";
 
 export const productsService = {
   async createNewProduct(category, manufacturer, model, price, rate, info) {
     try {
-      const categoryObj = await categoryService.findAllCategories(category)
-      console.log(categoryObj)
+      const categoryIdArray = await categoryService.findAllCategoriesId({title: category})
+      console.log('cat: ' + categoryIdArray)
 
       const newProduct = new Product({
-        categoryId: categoryObj._id,
+        categoryId: categoryIdArray[0]._id,
         manufacturer,
         model,
         price,
         rate
       })
-      const resp = await newProduct.save()
-      const productId = resp._id
-      const isInfoCreate = await infoService.createInfoForProduct(productId, info)
-      if (!isInfoCreate) {
+      const productObj = await newProduct.save()
+      const productId = productObj._id
+      const infoObj = await infoService.createInfoForProduct(productId, info)
+      if (!infoObj) {
         await Product.deleteOne({_id: productId})
+        return null
+      }
+      const isSearchParamsUpdated = await searchParamsService.updateSearchParams(category, info)
+      if (!isSearchParamsUpdated) {
+        await Info.deleteOne({_id: infoObj._id})
         return false
       }
-      return true
+      const productF = {
+        ...productObj._doc,
+        info: {...infoObj._doc}
+      }
+      return productF
     } catch (e) {
       console.log(e)
-      return false
+      return null
     }
   },
   async findAllProducts(filter) {
-    console.log(filter)
     try {
-      const category = await categoryService.findAllCategories(filter.category)
-      const categoryF = filter.category ? {category: category._doc._id} : {}
+      console.log('info')
+      console.log(filter.info)
+      const categoriesFilter = filter.category ? {title: filter.category} : {}
+      const categoryIdArray = await categoryService.findAllCategoriesId(categoriesFilter)
+      const categoryIdFilter = categoryIdArray ? {categoryId: categoryIdArray} : {}
+      let productIdByInfoFilter = {}
+      if (typeof filter.category === 'string' && filter.info) {
+        const productIdArray = await infoService.findAllInfo(filter.info)
+        if(productIdArray.length > 0 ) {
+          productIdByInfoFilter = {_id: productIdArray}
+        }else {
+          return null
+        }
+      }
       const products = await Product.find({
-        ...categoryF,
+        ...categoryIdFilter,
+        ...productIdByInfoFilter,
         $or: [
           {manufacturer: {$regex: filter.title ?? '', $options: 'i'}},
           {model: {$regex: filter.title ?? '', $options: 'i'}}
@@ -55,9 +78,10 @@ export const productsService = {
       if (!info) return null
       const product = await Product.findById(productId, {__v: 0})
       if (product === {}) return null
+      console.log(...info._doc)
       return {
         ...product._doc,
-        ...info._doc
+        info: {...info._doc}
       }
     } catch (e) {
       return null
@@ -65,8 +89,14 @@ export const productsService = {
   },
   async deleteProductById(productId) {
     try {
-      await Product.deleteOne({_id: productId})
-      return await infoService.deleteInfoByProductId(productId);
+      const res1 = await Product.deleteOne({_id: productId})
+      const res2 = await infoService.deleteInfoByProductId(productId);
+      if (res1?.deletedCount === 0) {
+        if (res2?.deletedCount === 0) {
+          throw new Error('Not found product or info by productId')
+        }
+      }
+      return true
     } catch (e) {
       console.log(e)
       return false

@@ -25,9 +25,9 @@ export const addProduct = async (req, res) => {
   //   return
   // }
   const {category, manufacturer, model, price, rate, info} = req.body
-  const isProductCreated = await productsService.createNewProduct(category, manufacturer, model, price, rate, info)
-  if (!isProductCreated) return res.status(500).send({error: "Error, product not added. Contact support or try again later"})
-  return res.status(200).send({message: 'Product added'})
+  const product = await productsService.createNewProduct(category, manufacturer, model, price, rate, info)
+  if (!product) return res.status(500).send({error: "Error, product not added. Contact support or try again later"})
+  return res.status(200).send(product)
 }
 export const deleteProduct = async (req, res) => {
   const isProductDeleted = await productsService.deleteProductById(req.params.id)
@@ -58,7 +58,6 @@ export const addSearchParam = async (req, res) => {
 }
 export const getSearchParamsByCategory = async (req, res) => {
   const params = await searchParamsService.findSearchParamsByCategory(req.query.categoryTitle)
-  console.log(params)
   if (!params) return res.status(500).json({message: 'Failed'})
   return res.status(200).json(params)
 }

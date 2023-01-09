@@ -7,17 +7,8 @@ import morgan from 'morgan'
 import {categoryRouter} from "./routes/category.js";
 import {searchParamsRouter} from "./routes/search-params-by-category.js";
 
-mongoose.set('strictQuery', true)
 
 const port = process.env.PORT || 7542
-
-mongoose.connect(keys.mongoURI)
-  .then(() => {
-    console.log('Connected to mongodb')
-  })
-  .catch((err) => {
-    console.log(`mongodb error: ${err}`)
-  })
 
 app.use(json)
 app.use(cors({}))
@@ -28,6 +19,14 @@ app.use('/category', categoryRouter)
 app.use('/params', searchParamsRouter)
 
 app.listen(port, (err) => {
+  mongoose.connect(keys.mongoURI)
+    .then(() => {
+      console.log('Connected to mongodb')
+    })
+    .catch((err) => {
+      console.log(`mongodb error: ${err}`)
+      mongoose.disconnect()
+    })
   if (err) {
     return console.log(err)
   }
