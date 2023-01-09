@@ -4,34 +4,38 @@ import {categoryService} from "./category.service.js";
 import {searchParamsService} from "./search-params-by-category.service.js";
 import {Info} from "../model/Info.js";
 
-export const productsService = {
-  async createNewProduct(category, manufacturer, model, price, rate, info) {
+export const productService = {
+  async create(categoryId, brand, model, price, rate, info) {
     try {
-      const categoryIdArray = await categoryService.findAllCategoriesId({title: category})
-      console.log('cat: ' + categoryIdArray)
+      const category = await categoryService.findById(categoryId, {})
+      if (!category) return null
 
       const newProduct = new Product({
-        categoryId: categoryIdArray[0]._id,
-        manufacturer,
+        categoryId: categoryId,
+        brand,
         model,
         price,
         rate
       })
-      const productObj = await newProduct.save()
-      const productId = productObj._id
-      const infoObj = await infoService.createInfoForProduct(productId, info)
-      if (!infoObj) {
+      const productDoc = await newProduct.save()
+
+      const productId = productDoc._id
+      const infoDoc = await infoService.createInfoForProduct(productId, info)
+      if (!infoDoc) {
         await Product.deleteOne({_id: productId})
         return null
       }
-      const isSearchParamsUpdated = await searchParamsService.updateSearchParams(category, info)
+
+      const isSearchParamsUpdated = await searchParamsService.updateSearchParams(categoryId, info)
       if (!isSearchParamsUpdated) {
-        await Info.deleteOne({_id: infoObj._id})
-        return false
+        await Info.deleteOne({_id: infoDoc._id})
+        await Product.deleteOne({_id: productId})
+        return null
       }
+
       const productF = {
-        ...productObj._doc,
-        info: {...infoObj._doc}
+        ...productDoc._doc,
+        info: infoDoc.info
       }
       return productF
     } catch (e) {
@@ -39,44 +43,45 @@ export const productsService = {
       return null
     }
   },
-  async findAllProducts(filter) {
+  async findAll(filter) {
     try {
-      console.log('info')
-      console.log(filter.info)
-      const categoriesFilter = filter.category ? {title: filter.category} : {}
-      const categoryIdArray = await categoryService.findAllCategoriesId(categoriesFilter)
-      const categoryIdFilter = categoryIdArray ? {categoryId: categoryIdArray} : {}
+      const categoriesFilter = filter.categoryId ? {_id: filter.categoryId} : {}
+      const categoryIdArray = await categoryService.findAll(categoriesFilter, {_id: 1})
+      const categoryIdFilter = categoryIdArray.length > 0 ? {categoryId: categoryIdArray} : {}
+
       let productIdByInfoFilter = {}
-      if (typeof filter.category === 'string' && filter.info) {
-        const productIdArray = await infoService.findAllInfo(filter.info)
-        if(productIdArray.length > 0 ) {
+      if (typeof filter.categoryId === 'string' && filter.info) {
+        const productIdArray = await infoService.findAllProductId(filter.info)
+        if (productIdArray.length > 0) {
           productIdByInfoFilter = {_id: productIdArray}
-        }else {
+        } else {
           return null
         }
       }
+
       const products = await Product.find({
         ...categoryIdFilter,
         ...productIdByInfoFilter,
         $or: [
-          {manufacturer: {$regex: filter.title ?? '', $options: 'i'}},
+          {brand: {$regex: filter.title ?? '', $options: 'i'}},
           {model: {$regex: filter.title ?? '', $options: 'i'}}
         ]
       })
       if (!products) {
         return null
       }
+
       return products
     } catch (e) {
       console.log(e)
       return null
     }
   },
-  async findProductById(productId) {
+  async findById(productId) {
     try {
-      const info = await infoService.findInfoByProductId(productId)
+      const info = await infoService.findById(productId, {_id: 0, productId: 0})
       if (!info) return null
-      const product = await Product.findById(productId, {__v: 0})
+      const product = await Product.findById(productId)
       if (product === {}) return null
       console.log(...info._doc)
       return {
@@ -87,10 +92,10 @@ export const productsService = {
       return null
     }
   },
-  async deleteProductById(productId) {
+  async deleteById(productId) {
     try {
       const res1 = await Product.deleteOne({_id: productId})
-      const res2 = await infoService.deleteInfoByProductId(productId);
+      const res2 = await infoService.deleteByProductId(productId);
       if (res1?.deletedCount === 0) {
         if (res2?.deletedCount === 0) {
           throw new Error('Not found product or info by productId')

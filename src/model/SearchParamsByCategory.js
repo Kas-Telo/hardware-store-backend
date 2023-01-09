@@ -1,12 +1,16 @@
 import {Schema, model} from "mongoose";
-import {infoTypeSchema} from "./Info.js";
 
 const searchParamsByCategorySchema = new Schema({
-  categoryTitle: {
-    type: String,
+  categoryId: {
+    type: Schema.Types.ObjectId,
     require: true
   },
-  params: [infoTypeSchema]
-})
+  params: {
+    type: [{
+      title: String,
+      description: String,
+    }], _id: false
+  },
+}, {versionKey: false})
 
 export default model('SearchParamsByCategory', searchParamsByCategorySchema)

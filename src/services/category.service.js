@@ -6,26 +6,26 @@ export const categoryService = {
       const category = new Category({
         title
       })
-      await category.save()
+      const categoryF = await category.save()
       return category
-    } catch (e) {
-      return null
-    }
-  },
-  async findAllCategoriesId(filter) {
-    try {
-      const categoryId = await Category.find(filter).select({_id: 1})
-      return categoryId
     } catch (e) {
       console.log(e)
       return null
     }
   },
-  async findAllCategories() {
+  async findAll(filter, responseFilter) {
     try {
-      const categories = await Category.find().select({__v: 0})
-      return categories
+      return await Category.find(filter).select(responseFilter)
     } catch (e) {
+      console.log(e)
+      return null
+    }
+  },
+  async findById(categoryId, responseFilter) {
+    try {
+      return await Category.findOne({_id: categoryId}).select(responseFilter)
+    } catch (e) {
+      console.log(e)
       return null
     }
   }

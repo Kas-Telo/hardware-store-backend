@@ -1,5 +1,5 @@
 import {app, json} from './app.js'
-import {productsRouter} from "./routes/products.js";
+import {productsRouter} from "./routes/product.js";
 import keys from './config/keys.js'
 import mongoose from 'mongoose'
 import cors from 'cors'

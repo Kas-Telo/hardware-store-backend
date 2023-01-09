@@ -1,9 +1,9 @@
 import SearchParamsByCategory from "../model/SearchParamsByCategory.js";
 
 export const searchParamsService = {
-  async createSearchParam(categoryTitle) {
+  async createSearchParam(categoryId) {
     try {
-      const newDoc = new SearchParamsByCategory({categoryTitle, params: []})
+      const newDoc = new SearchParamsByCategory({categoryId, params: []})
       await newDoc.save()
       return true
     } catch (e) {
@@ -11,9 +11,9 @@ export const searchParamsService = {
       return false
     }
   },
-  async updateSearchParams(categoryTitle, params) {
+  async updateSearchParams(categoryId, params) {
     try {
-      await SearchParamsByCategory.findOneAndUpdate({categoryTitle}, {$addToSet: {params}})
+      await SearchParamsByCategory.findOneAndUpdate({categoryId}, {$addToSet: {params}})
       return true
     } catch (e) {
       console.log(e)
@@ -21,10 +21,9 @@ export const searchParamsService = {
     }
 
   },
-  async findSearchParamsByCategory(categoryTitle) {
+  async findSearchParamsByCategory(categoryId) {
     try {
-      const paramsDoc = await SearchParamsByCategory.find({categoryTitle})
-      console.log(paramsDoc)
+      const paramsDoc = await SearchParamsByCategory.find({categoryId})
       return paramsDoc[0].params
     } catch (e) {
       console.log(e)

@@ -5,7 +5,7 @@ const productSchema = new Schema({
     type: Schema.Types.ObjectId,
     required: true
   },
-  manufacturer: {
+  brand: {
     type: String,
     required: true
   },
@@ -21,6 +21,6 @@ const productSchema = new Schema({
     type: Number,
     required: true
   },
-})
+}, {versionKey: false})
 
 export default model('product', productSchema)

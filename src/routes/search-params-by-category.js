@@ -1,8 +1,7 @@
 import express from 'express'
-import {addSearchParam, getSearchParamsByCategory} from "../controllers/products.js";
+import {getSearchParamsByCategory} from "../controllers/search-params-by-category.js";
 
 export const searchParamsRouter = express.Router()
 
 searchParamsRouter.get('/', getSearchParamsByCategory)
-searchParamsRouter.put('/', addSearchParam)
 
