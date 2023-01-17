@@ -1,24 +1,32 @@
 import {productService} from "../services/product.service.js";
 
-export const getAll = async (req, res) => {
-  const products = await productService.findAll(req.query)
-  if (!products || products.length === 0) return res.status(400).json({message: 'products not found'})
-  return res.status(200).json(products)
+export const getAll = async (req, res, next) => {
+  try {
+    const products = await productService.findAll(req.query)
+    return res.status(200).json(products)
+  } catch (e) {
+    next(e)
+  }
 }
-export const getOne = async (req, res) => {
-  const product = await productService.findById(req.params.id)
-  if (!product) return res.status(400).json({message: 'product not found'})
-  return res.status(200).json(product)
+export const getOne = async (req, res, next) => {
+  try{
+    const product = await productService.findById(req.params.id)
+    return res.status(200).json(product)
+  }catch (e) {
+    next(e)
+  }
 }
-export const create = async (req, res) => {
+export const create = async (req, res, next) => {
   const {categoryId, brand, model, price, rate, info} = req.body
-  const product = await productService.create(categoryId, brand, model, price, rate, info)
-  if (!product) return res.status(500).send({error: "Error, product not added. Contact support or try again later"})
-  return res.status(200).send(product)
+  try {
+    const product = await productService.create(next, categoryId, brand, model, price, rate, info)
+    return res.status(200).send(product)
+  } catch {
+
+  }
 }
 export const removeOne = async (req, res) => {
   const isProductDeleted = await productService.deleteById(req.params.id)
-  if (!isProductDeleted) return res.status(500).json({message: 'Failed'})
   return res.status(200).json({message: 'Success'})
 }
 

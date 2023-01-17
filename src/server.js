@@ -6,6 +6,7 @@ import cors from 'cors'
 import morgan from 'morgan'
 import {categoryRouter} from "./routes/category.js";
 import {searchParamsRouter} from "./routes/search-params-by-category.js";
+import {errorHandlingMiddleware} from "./middleware/ErrorHandlingMiddleware.js";
 
 
 const port = process.env.PORT || 7542
@@ -17,6 +18,8 @@ app.use(morgan('dev'))
 app.use('/product', productsRouter)
 app.use('/category', categoryRouter)
 app.use('/params', searchParamsRouter)
+
+app.use(errorHandlingMiddleware)
 
 app.listen(port, (err) => {
   mongoose.connect(keys.mongoURI)

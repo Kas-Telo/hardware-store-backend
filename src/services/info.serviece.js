@@ -1,11 +1,11 @@
 import {Info} from "../model/Info.js";
+import {ApiError} from "../error/ApiError.js";
 
 export const infoService = {
   async createInfoForProduct(productId, info) {
     try {
       const newInfo = new Info({
-        productId,
-        info
+        productId, info
       })
       return await newInfo.save()
     } catch (e) {
@@ -15,38 +15,43 @@ export const infoService = {
   },
   async findAllProductId(filter) {
     try {
-      const resultArray = await Promise.all(filter.map(async (el) => {
-        const productIdArray = await Info.find({info: {$elemMatch: {$and: [{title: el.title}, {description: el.description}]}}})
-        return productIdArray.map(el => el.productId.toString())
+      const productIdArrayOfArraysByDifferentFilters = await Promise.all(filter.map(async (el1) => {
+        const infoArrayByOneFilter = await Promise.all(el1.description.map(async (el) => {
+          const infoArrayByOneFilterDescription = await Info.find({
+            info: {$elemMatch: {$and: [{title: el1.title}, {description: el}]}}
+          })
+          return infoArrayByOneFilterDescription.map(el => el.productId.toString())
+        }))
+        return infoArrayByOneFilter.flat()
       }))
-      resultArray.sort((a, b) => a.length - b.length)
 
-      if (resultArray.length[0] === 0) return []
-      if (resultArray.length === 0) return []
-      if (resultArray.length === 1) return resultArray[0]
+      productIdArrayOfArraysByDifferentFilters.sort((a, b) => a.length - b.length)
 
-      const resultProductIdArray = resultArray[0].map(el => {
-        for (let i = 1; i < resultArray.length; i++) {
-          const bePresent = resultArray[i].includes(el)
+      if (productIdArrayOfArraysByDifferentFilters[0].length === 0) {
+        throw ApiError.notFound("Продукты не найдены")
+      }
+      if (productIdArrayOfArraysByDifferentFilters.length === 1 && productIdArrayOfArraysByDifferentFilters[0] !== 0) {
+        return productIdArrayOfArraysByDifferentFilters[0]
+      }
+
+      const resultProductIdArray = productIdArrayOfArraysByDifferentFilters[0].map(el => {
+        for (let i = 1; i < productIdArrayOfArraysByDifferentFilters.length; i++) {
+          const bePresent = productIdArrayOfArraysByDifferentFilters[i].includes(el)
           if (!bePresent) return
         }
         return el
       })
-
       return resultProductIdArray
     } catch (e) {
-      console.log(e)
-      return null
+      throw e
     }
   },
-  async findById(productId, responseFilter) {
+  async findByProductId(productId, responseFilter) {
     try {
       const info = await Info.find({productId: productId}).select(responseFilter)
-      if (info === {}) return null
       return info[0]
     } catch (e) {
-      console.log(e)
-      return null
+      throw e
     }
   },
   async deleteByProductId(productId) {

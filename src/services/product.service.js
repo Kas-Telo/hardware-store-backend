@@ -3,12 +3,16 @@ import Product from "../model/Product.js";
 import {categoryService} from "./category.service.js";
 import {searchParamsService} from "./search-params-by-category.service.js";
 import {Info} from "../model/Info.js";
+import {ApiError} from "../error/ApiError.js";
 
 export const productService = {
-  async create(categoryId, brand, model, price, rate, info) {
+  async create(next, categoryId, brand, model, price, rate, info) {
     try {
-      const category = await categoryService.findById(categoryId, {})
-      if (!category) return null
+      try {
+        const category = await categoryService.findById(next, categoryId, {})
+      } catch {
+        return Promise.reject()
+      }
 
       const newProduct = new Product({
         categoryId: categoryId,
@@ -44,21 +48,26 @@ export const productService = {
     }
   },
   async findAll(filter) {
+    const categoriesFilter = filter.categoryId ? {_id: filter.categoryId} : {}
+    let categoryIdFilter = {}
     try {
-      const categoriesFilter = filter.categoryId ? {_id: filter.categoryId} : {}
       const categoryIdArray = await categoryService.findAll(categoriesFilter, {_id: 1})
-      const categoryIdFilter = categoryIdArray.length > 0 ? {categoryId: categoryIdArray} : {}
+      categoryIdFilter = {categoryId: categoryIdArray}
+    } catch (e) {
+      throw e
+    }
 
-      let productIdByInfoFilter = {}
-      if (typeof filter.categoryId === 'string' && filter.info) {
+    let productIdByInfoFilter = {}
+    if (typeof filter.categoryId === 'string' && filter.info) {
+      try {
         const productIdArray = await infoService.findAllProductId(filter.info)
-        if (productIdArray.length > 0) {
-          productIdByInfoFilter = {_id: productIdArray}
-        } else {
-          return null
-        }
+        productIdByInfoFilter = {_id: productIdArray}
+      } catch (e) {
+        throw e
       }
+    }
 
+    try {
       const products = await Product.find({
         ...categoryIdFilter,
         ...productIdByInfoFilter,
@@ -67,29 +76,26 @@ export const productService = {
           {model: {$regex: filter.title ?? '', $options: 'i'}}
         ]
       })
-      if (!products) {
-        return null
-      }
-
+      if (products.length === 0) throw ApiError.notFound("Продукты не найдены")
       return products
     } catch (e) {
-      console.log(e)
-      return null
+      throw e
     }
   },
   async findById(productId) {
     try {
-      const info = await infoService.findById(productId, {_id: 0, productId: 0})
-      if (!info) return null
+      let info = await infoService.findByProductId(productId, {_id: 0, productId: 0})
+
       const product = await Product.findById(productId)
-      if (product === {}) return null
-      console.log(...info._doc)
+      if (!product) throw ApiError.notFound("Продукт не найден")
+      if(product && !info ) throw ApiError.internal("При создании продукта, не произошло создаие info")
+
       return {
         ...product._doc,
-        info: {...info._doc}
+        info: info._doc.info
       }
     } catch (e) {
-      return null
+      throw e
     }
   },
   async deleteById(productId) {
