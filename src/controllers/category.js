@@ -1,18 +1,23 @@
 import {categoryService} from "../services/category.service.js";
-import {searchParamsService} from "../services/search-params-by-category.service.js";
+import {ApiError} from "../error/ApiError.js";
 
-export const addCategory = async (req, res) => {
-  const {title} = req.body
-  const category = await categoryService.createCategory(title)
-  if (!category) return res.status(500).json({message: 'Failed'})
-  const isSearchParamsCreated = await searchParamsService.createSearchParam(category._id)
-  if (!isSearchParamsCreated) return res.status(500).json({message: 'Failed'})
-  return res.status(200).json({message: 'success'})
+export const addCategory = async (req, res, next) => {
+  try {
+    const {title} = req.body
+    const category = await categoryService.createCategory(title)
+    return res.status(200).json({message: 'Успешно'})
+  } catch (e) {
+    next(e)
+  }
 }
 
-export const getAllCategories = async (req, res) => {
+export const getAllCategories = async (req, res, next) => {
   console.log('get categories')
-  const categories = await categoryService.findAll()
-  if (!categories) return res.status(500).json({message: 'Failed'})
-  return res.status(200).json(categories)
+  try {
+    const categories = await categoryService.findAll({}, {})
+    if (categories.length === 0) throw ApiError.notFound("Категории не найдены")
+    return res.status(200).json(categories)
+  } catch (e) {
+    next(e)
+  }
 }

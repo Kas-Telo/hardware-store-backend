@@ -6,12 +6,11 @@ import {Info} from "../model/Info.js";
 import {ApiError} from "../error/ApiError.js";
 
 export const productService = {
-  async create(next, categoryId, brand, model, price, rate, info) {
+  async create(categoryId, brand, model, price, rate, info) {
     try {
-      try {
-        const category = await categoryService.findById(next, categoryId, {})
-      } catch {
-        return Promise.reject()
+      const category = await categoryService.findById(categoryId, {})
+      if (!category) {
+        throw ApiError.notFound("Такой категории не существует, проверьте вводные данные")
       }
 
       const newProduct = new Product({
@@ -27,14 +26,14 @@ export const productService = {
       const infoDoc = await infoService.createInfoForProduct(productId, info)
       if (!infoDoc) {
         await Product.deleteOne({_id: productId})
-        return null
+        throw ApiError.internal("Ошибка при создании документа info")
       }
 
       const isSearchParamsUpdated = await searchParamsService.updateSearchParams(categoryId, info)
       if (!isSearchParamsUpdated) {
         await Info.deleteOne({_id: infoDoc._id})
         await Product.deleteOne({_id: productId})
-        return null
+        throw ApiError.internal("Ошибка при обновлении параметров поиска")
       }
 
       const productF = {
@@ -43,31 +42,37 @@ export const productService = {
       }
       return productF
     } catch (e) {
-      console.log(e)
-      return null
+      throw e
     }
   },
   async findAll(filter) {
-    const categoriesFilter = filter.categoryId ? {_id: filter.categoryId} : {}
-    let categoryIdFilter = {}
     try {
+      const {page = 1, limit = 1} = filter
+      const categoriesFilter = filter.categoryId ? {_id: filter.categoryId} : {}
+      let categoryIdFilter = {}
       const categoryIdArray = await categoryService.findAll(categoriesFilter, {_id: 1})
+      if (categoryIdArray.length === 0) {
+        throw ApiError.notFound("Категорий с такими id не найдено")
+      }
       categoryIdFilter = {categoryId: categoryIdArray}
-    } catch (e) {
-      throw e
-    }
 
-    let productIdByInfoFilter = {}
-    if (typeof filter.categoryId === 'string' && filter.info) {
-      try {
+
+      let productIdByInfoFilter = {}
+      if (typeof filter.categoryId === 'string' && filter.info) {
+
         const productIdArray = await infoService.findAllProductId(filter.info)
         productIdByInfoFilter = {_id: productIdArray}
-      } catch (e) {
-        throw e
       }
-    }
 
-    try {
+      const totalCount = await Product.find({
+        ...categoryIdFilter,
+        ...productIdByInfoFilter,
+        $or: [
+          {brand: {$regex: filter.title ?? '', $options: 'i'}},
+          {model: {$regex: filter.title ?? '', $options: 'i'}}
+        ]
+      }).count()
+
       const products = await Product.find({
         ...categoryIdFilter,
         ...productIdByInfoFilter,
@@ -75,9 +80,14 @@ export const productService = {
           {brand: {$regex: filter.title ?? '', $options: 'i'}},
           {model: {$regex: filter.title ?? '', $options: 'i'}}
         ]
-      })
-      if (products.length === 0) throw ApiError.notFound("Продукты не найдены")
-      return products
+      }).limit(limit * 1).skip((page - 1) * limit)
+
+      const productF = {
+        products,
+        totalCount,
+      }
+
+      return productF
     } catch (e) {
       throw e
     }
@@ -88,7 +98,7 @@ export const productService = {
 
       const product = await Product.findById(productId)
       if (!product) throw ApiError.notFound("Продукт не найден")
-      if(product && !info ) throw ApiError.internal("При создании продукта, не произошло создаие info")
+      if (product && !info) throw ApiError.internal("При создании продукта, не произошло создаие info")
 
       return {
         ...product._doc,
@@ -100,17 +110,17 @@ export const productService = {
   },
   async deleteById(productId) {
     try {
-      const res1 = await Product.deleteOne({_id: productId})
-      const res2 = await infoService.deleteByProductId(productId);
-      if (res1?.deletedCount === 0) {
-        if (res2?.deletedCount === 0) {
-          throw new Error('Not found product or info by productId')
-        }
+      const resultByProductDeleted = await Product.deleteOne({_id: productId})
+      if (resultByProductDeleted.deletedCount === 0) {
+        throw ApiError.internal("Ошибка при удалении продукта")
+      }
+      const resultByInfoOfProductDeleted = await infoService.deleteByProductId(productId);
+      if (resultByInfoOfProductDeleted.deletedCount === 0) {
+        throw ApiError.internal("Ошибка при удалении info продукта")
       }
       return true
     } catch (e) {
-      console.log(e)
-      return false
+      throw e
     }
   }
 }

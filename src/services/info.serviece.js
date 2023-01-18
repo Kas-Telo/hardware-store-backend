@@ -9,19 +9,30 @@ export const infoService = {
       })
       return await newInfo.save()
     } catch (e) {
-      console.log(e)
-      return null
+      throw e
     }
   },
   async findAllProductId(filter) {
     try {
       const productIdArrayOfArraysByDifferentFilters = await Promise.all(filter.map(async (el1) => {
-        const infoArrayByOneFilter = await Promise.all(el1.description.map(async (el) => {
+        let infoArrayByOneFilter = []
+
+        if (typeof el1.description === 'string') {
           const infoArrayByOneFilterDescription = await Info.find({
-            info: {$elemMatch: {$and: [{title: el1.title}, {description: el}]}}
+            info: {$elemMatch: {$and: [{title: el1.title}, {description: el1.description}]}}
           })
+
           return infoArrayByOneFilterDescription.map(el => el.productId.toString())
-        }))
+        } else {
+          infoArrayByOneFilter = await Promise.all(el1.description.map(async (el) => {
+            const infoArrayByOneFilterDescription = await Info.find({
+              info: {$elemMatch: {$and: [{title: el1.title}, {description: el}]}}
+            })
+
+            return infoArrayByOneFilterDescription.map(el => el.productId.toString())
+          }))
+        }
+
         return infoArrayByOneFilter.flat()
       }))
 
@@ -58,8 +69,7 @@ export const infoService = {
     try {
       return await Info.findOneAndDelete({productId})
     } catch (e) {
-      console.log(e)
-      return null
+      throw e
     }
   }
 }

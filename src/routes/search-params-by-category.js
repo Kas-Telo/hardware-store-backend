@@ -3,5 +3,5 @@ import {getSearchParamsByCategory} from "../controllers/search-params-by-categor
 
 export const searchParamsRouter = express.Router()
 
-searchParamsRouter.get('/', getSearchParamsByCategory)
+searchParamsRouter.get('/:id', getSearchParamsByCategory)
 

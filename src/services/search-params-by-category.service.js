@@ -1,4 +1,5 @@
 import SearchParamsByCategory from "../model/SearchParamsByCategory.js";
+import {ApiError} from "../error/ApiError.js";
 
 export const searchParamsService = {
   async createSearchParam(categoryId) {
@@ -7,8 +8,7 @@ export const searchParamsService = {
       await newDoc.save()
       return true
     } catch (e) {
-      console.log(e)
-      return false
+      throw e
     }
   },
   async updateSearchParams(categoryId, params) {
@@ -16,18 +16,16 @@ export const searchParamsService = {
       await SearchParamsByCategory.findOneAndUpdate({categoryId}, {$addToSet: {params}})
       return true
     } catch (e) {
-      console.log(e)
-      return false
+      throw e
     }
-
   },
   async findSearchParamsByCategory(categoryId) {
     try {
       const paramsDoc = await SearchParamsByCategory.find({categoryId})
+      if (paramsDoc.length === 0) throw ApiError.notFound("Параметры поиска по данной категории не найдены")
       return paramsDoc[0].params
     } catch (e) {
-      console.log(e)
-      return null
+      throw e
     }
   }
 }
