@@ -4,7 +4,16 @@ import {ApiError} from "../error/ApiError.js";
 export const addCategory = async (req, res, next) => {
   try {
     const {title} = req.body
-    const category = await categoryService.createCategory(title)
+    if (!title) {
+      throw ApiError.badRequest("title обязателен")
+    }
+    if (typeof title !== 'string') {
+      throw ApiError.badRequest("title должен быть типа string")
+    }
+    if (title.length < 3 || title.length > 40){
+      throw ApiError.badRequest("title должен быть длинной от 3 до 40 символов")
+    }
+    await categoryService.createCategory(title);
     return res.status(200).json({message: 'Успешно'})
   } catch (e) {
     next(e)
